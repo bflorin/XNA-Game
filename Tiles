@@ -1,0 +1,173 @@
+using Microsoft.Xna.Framework;
+using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace TextureBg
+{
+    class Tiles : GameComponent
+    {
+        private Texture2D template;
+        private Vector3 position;
+        private VertexBuffer buffer;
+        private int xoffset;
+        private int yoffset;
+        private int zoffset;
+
+        public override void Initialize()
+        {
+            base.Initialize();
+        }
+
+        public Tiles(Game game, Texture2D Template, Vector3 Position)
+            : base(game)
+        {
+            position = Position;
+            template = Template;
+            SetOffsets(0, 0, 0, 2, 1);
+        }
+
+        public void SetOffsets(int x,int y, int z, int type, int pas)
+        {
+            xoffset = x;
+            yoffset = y;
+            zoffset = z;
+            ConstructBuffer(type, pas);
+        }
+
+        public override void Update(GameTime gameTime)
+        {
+            base.Update(gameTime);
+        }
+
+        public void ConstructBuffer(int type, int pas)
+        {
+            if (xoffset < 1)
+                xoffset = 1;
+            if (yoffset < 1)
+                yoffset = 1;
+            if (zoffset < 1)
+                zoffset = 1;
+            List<VertexPositionTexture> vertexList = new List<VertexPositionTexture>();
+            for (int x = 1; x <= xoffset; x += pas)
+                for (int y = 1; y <= yoffset; y += pas)
+                    for (int z = 1; z <= zoffset; z += pas)
+                    {
+                        if (type == 1)
+                            foreach (VertexPositionTexture vertex in SingleTile(xoffset, y, z, type, pas))
+                                vertexList.Add(vertex);
+                        if (type == 2)
+                            foreach (VertexPositionTexture vertex in SingleTile(x, yoffset, z, type, pas))
+                                vertexList.Add(vertex);
+                        if (type == 3)
+                            foreach (VertexPositionTexture vertex in SingleTile(x, y, zoffset, type, pas))
+                                vertexList.Add(vertex);
+                    }
+            buffer = new VertexBuffer(Game.GraphicsDevice, VertexPositionTexture.VertexDeclaration, vertexList.Count, BufferUsage.None);
+            buffer.SetData<VertexPositionTexture>(vertexList.ToArray());
+        }
+
+        public List<VertexPositionTexture> SingleTile(int x, int y, int z, int type, int pas)
+        {
+            List<VertexPositionTexture> vList = new List<VertexPositionTexture>();
+            Vector3 coordonate = new Vector3(x, y, z);
+            Vector2[] texturec = new Vector2[12]
+            {
+                new Vector2(0,0),
+                new Vector2(1,0),
+                new Vector2(1,1),
+                new Vector2(0,0),
+                new Vector2(1,1),
+                new Vector2(0,1),
+
+                new Vector2(0,0),
+                new Vector2(0,1),
+                new Vector2(1,1),
+                new Vector2(0,0),
+                new Vector2(1,1),
+                new Vector2(1,0)
+            };
+            Vector3[] intersect;
+            if (type == 1)
+                intersect = new Vector3[12] 
+                    { 
+                        new Vector3(0, 0, 0),
+                        new Vector3(0, pas, 0),
+                        new Vector3(0, pas, pas),
+                        new Vector3(0, 0, 0),
+                        new Vector3(0, pas, pas),
+                        new Vector3(0, 0, pas),
+
+                        new Vector3(0, 0, 0),
+                        new Vector3(0, 0, pas),
+                        new Vector3(0, pas, pas),
+                        new Vector3(0, 0, 0),
+                        new Vector3(0, pas, pas),
+                        new Vector3(0, pas, 0),
+                    };
+
+            else if (type == 2)
+                intersect = new Vector3[12] 
+                    { 
+                        new Vector3(0, 0, 0),
+                        new Vector3(pas, 0, 0),
+                        new Vector3(pas, 0, pas),
+                        new Vector3(0, 0, 0),
+                        new Vector3(pas, 0, pas),
+                        new Vector3(0, 0, pas),
+
+                        new Vector3(0, 0, 0),
+                        new Vector3(0, 0, pas),
+                        new Vector3(pas, 0, pas),
+                        new Vector3(0, 0, 0),
+                        new Vector3(pas, 0, pas),
+                        new Vector3(pas, 0, 0),
+                    };
+            else if (type == 3)
+                intersect = new Vector3[12] 
+                    { 
+                        new Vector3(0, 0, 0),
+                        new Vector3(0, pas, 0),
+                        new Vector3(pas, pas, 0),
+                        new Vector3(0, 0, 0),
+                        new Vector3(pas, pas, 0),
+                        new Vector3(pas, 0, 0),
+
+                        new Vector3(0, 0, 0),
+                        new Vector3(pas, 0, 0),
+                        new Vector3(pas, pas, 0),
+                        new Vector3(0, 0, 0),
+                        new Vector3(pas, pas, 0),
+                        new Vector3(0, pas, 0),
+                    };
+            else
+                intersect = new Vector3[1]{
+                    Vector3.Zero
+                };
+            for (int i = 0; i < 12; i++)
+                vList.Add(new VertexPositionTexture(new Vector3(x, y, z) + intersect[i] + position, texturec[i]));
+            return vList;
+        }
+
+        public void Draw(Camera camera, BasicEffect effect)
+        {
+            effect.View = camera.View;
+            effect.Projection = camera.Projection;
+            effect.World = Matrix.Identity;
+            effect.DiffuseColor = Color.DimGray.ToVector3();
+            effect.TextureEnabled = true;
+            effect.Texture = template;
+            foreach (EffectPass pass in effect.CurrentTechnique.Passes)
+            {
+                pass.Apply();
+                Game.GraphicsDevice.SamplerStates[0] = SamplerState.LinearClamp;
+                Game.GraphicsDevice.SetVertexBuffer(buffer);
+                Game.GraphicsDevice.DrawPrimitives(PrimitiveType.TriangleList, 0, buffer.VertexCount / 3);
+            }
+        }
+
+
+    }
+}
